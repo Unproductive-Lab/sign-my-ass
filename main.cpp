@@ -196,6 +196,7 @@ bool verify_signature(const Point& public_key, const std::string& message, const
 
     bool is_valid = (R_x_mod_n == r);
 
+
     // Дополнительный вывод для конечного результата
     std::cout << "Signature is " << (is_valid ? "valid" : "invalid") << std::endl;
 
