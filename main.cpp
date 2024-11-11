@@ -120,6 +120,7 @@ big_int random_big_int(const big_int& max) {
     static boost::random::mt19937 gen(static_cast<unsigned int>(std::time(0)));
     big_int result = 0;
     big_int base = 1;
+    
 
     while (result < max) {
         boost::random::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
@@ -213,7 +214,6 @@ int main() {
     std::cout << "Public key: (" << public_key.x << ", " << public_key.y << ")" << std::endl;
 
     // Подпись сообщения
-    std::string message = "Hello, world!";
     big_int r, s;
     sign_message(private_key, message, r, s);
     std::cout << "Signature (r, s): (" << r << ", " << s << ")" << std::endl;
