@@ -2,6 +2,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/integer.hpp>
 #include <boost/random.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <random>
 #include <stdexcept>
 
@@ -11,65 +12,36 @@ using namespace boost::random;
 typedef int256_t big_int;
 
 // Параметры эллиптической кривой P-192
-const big_int p("6277101735386680763835789423207666416102355444459739541047");
-const big_int a("6277101735386680763835789423207666416102355444459739541046");
-const big_int b("2455155546008943817740293915197451784769108058161191238065");
-const big_int Gx("602046282375688656758213480587526111916698976636884684818");
-const big_int Gy("174050332293622031404857552280219410364023488927386650641");
-const big_int n("6277101735386680763835789423176059013767194773182842284081");
+const big_int p("97");
+const big_int a("2");
+const big_int b("3");
+const big_int Gx("3");
+const big_int Gy("6");
+const big_int n("5");
 
-// Функция для вычисления НОД
-big_int gcd(const big_int& a, const big_int& b) {
-    return b == 0 ? a : gcd(b, a % b);
-}
+boost::hash<std::string> string_hash;
 
 // Вычисление обратного элемента по модулю
 big_int mod_inverse(const big_int& k, const big_int& mod) {
-    // Проверка, что mod положительный
-    if (mod <= 0) {
-        throw std::invalid_argument("mod должен быть положительным");
+    if (k < 1 || mod < 2)
+        return -1;
+
+    big_int u1 = mod;
+    big_int u2 = 0;
+    big_int v1 = k;
+    big_int v2 = 1;
+
+    while (v1 != 0) {
+        big_int q = u1 / v1;
+        big_int t1 = u1 - q * v1;
+        big_int t2 = u2 - q * v2;
+        u1 = v1;
+        u2 = v2;
+        v1 = t1;
+        v2 = t2;
     }
 
-    // Приводим k к диапазону [0, mod-1]
-    big_int k_mod = k % mod;
-    if (k_mod < 0) {
-        k_mod += mod;
-    }
-
-    // Проверка на взаимную простоту
-    if (gcd(k_mod, mod) != 1) {
-        throw std::invalid_argument("k и mod не являются взаимно простыми, обратного элемента не существует");
-    }
-
-    // Инициализация переменных для расширенного алгоритма Евклида
-    big_int t = 0, new_t = 1;
-    big_int r = mod, new_r = k_mod;
-
-    // Выполнение расширенного алгоритма Евклида
-    while (new_r != 0) {
-        big_int quotient = r / new_r;
-
-        // Обновление переменных с помощью временных переменных
-        big_int temp_t = t;
-        t = new_t;
-        new_t = temp_t - quotient * new_t;
-
-        big_int temp_r = r;
-        r = new_r;
-        new_r = temp_r - quotient * new_r;
-    }
-
-    // Проверка на случай, если r не равно 1 (не должно происходить после gcd-проверки)
-    if (r > 1) {
-        throw std::invalid_argument("k не имеет обратного по модулю mod");
-    }
-
-    // Если результат отрицательный, приводим его к положительному значению
-    if (t < 0) {
-        t += mod;
-    }
-
-    return t;
+    return u1 == 1 ? (u2 + mod) % mod : -1;
 }
 
 struct Point {
@@ -84,12 +56,25 @@ struct Point {
         if (is_infinity) return other;
         if (other.is_infinity) return *this;
         if (x == other.x && y != other.y) return Point();
+        //big_int inv_k;
 
         big_int m;
         if (x == other.x) {
+            /*while (1)
+            {
+                inv_k = mod_inverse(2 * y, p);
+                if (inv_k == -1) continue;
+                else break;
+            }*/
             m = (3 * x * x + a) * mod_inverse(2 * y, p) % p;
         }
         else {
+            /*while (1)
+            {
+                inv_k = mod_inverse(other.x - x, p);
+                if (inv_k == -1) continue;
+                else break;
+            }*/
             m = (other.y - y) * mod_inverse(other.x - x, p) % p;
         }
 
@@ -120,7 +105,6 @@ big_int random_big_int(const big_int& max) {
     static boost::random::mt19937 gen(static_cast<unsigned int>(std::time(0)));
     big_int result = 0;
     big_int base = 1;
-    
 
     while (result < max) {
         boost::random::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
@@ -131,15 +115,6 @@ big_int random_big_int(const big_int& max) {
     return result % max;
 }
 
-// Хеш-функция (простейший пример, использующий только модуль)
-big_int hash_message(const std::string& message) {
-    big_int hash = 0;
-    for (char ch : message) {
-        hash = (hash * 31 + ch) % n;
-    }
-    return hash;
-}
-
 // Генерация ключей
 void generate_key_pair(big_int& private_key, Point& public_key) {
     private_key = random_big_int(n);
@@ -148,16 +123,23 @@ void generate_key_pair(big_int& private_key, Point& public_key) {
 
 // Подпись сообщения
 void sign_message(const big_int& private_key, const std::string& message, big_int& r, big_int& s) {
-    big_int z = hash_message(message);
+    big_int z = string_hash(message);
     big_int k;  // Переместили объявление переменной k вне цикла
 
     while (true) {
         k = random_big_int(n);  // Генерируем случайное значение k
         Point R = Point(Gx, Gy) * k;
         r = R.x % n;
+        //big_int inv_k;
 
         if (r == 0) continue;
 
+        /*while (1)
+         {
+            inv_k = mod_inverse(k, n);
+            if (inv_k == -1) continue;
+            else break;
+        }*/
         s = (mod_inverse(k, n) * (z + r * private_key)) % n;
         if (s != 0) break;
     }
@@ -171,8 +153,15 @@ void sign_message(const big_int& private_key, const std::string& message, big_in
 // Проверка подписи
 bool verify_signature(const Point& public_key, const std::string& message, const big_int& r, const big_int& s) {
     if (r <= 0 || r >= n || s <= 0 || s >= n) return false;
+    //big_int inv_k;
 
-    big_int z = hash_message(message);
+    big_int z = string_hash(message);
+    /*while (1)
+    {
+        inv_k = mod_inverse(s, n);
+        if (inv_k == -1) continue;
+        else break;
+    }*/
     big_int w = mod_inverse(s, n);
     big_int u1 = (z * w) % n;
     big_int u2 = (r * w) % n;
@@ -197,7 +186,6 @@ bool verify_signature(const Point& public_key, const std::string& message, const
 
     bool is_valid = (R_x_mod_n == r);
 
-
     // Дополнительный вывод для конечного результата
     std::cout << "Signature is " << (is_valid ? "valid" : "invalid") << std::endl;
 
@@ -214,6 +202,7 @@ int main() {
     std::cout << "Public key: (" << public_key.x << ", " << public_key.y << ")" << std::endl;
 
     // Подпись сообщения
+    std::string message = "Hello, world!";
     big_int r, s;
     sign_message(private_key, message, r, s);
     std::cout << "Signature (r, s): (" << r << ", " << s << ")" << std::endl;
