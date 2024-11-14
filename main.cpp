@@ -184,37 +184,41 @@ int main()
     {
         cout << "1.Подписать файл.\n2.Проверить подпись.\n3.Выход.\n";
         cin >> opt;
-        if (opt == 1)
-        {
-            Text.open("D://Message.txt", ios::in);
-            getline(Text, message);
-            Text.close();
-            try
-            {
-                generate_key_pair(private_key, public_key);
-                sign_message(private_key, message, r, s);
+        switch (opt){
+            case 1 : {
+                Text.open("D://Message.txt", ios::in);
+                getline(Text, message);
+                Text.close();
+                try
+                {
+                    generate_key_pair(private_key, public_key);
+                    sign_message(private_key, message, r, s);
+                }
+                catch (const std::invalid_argument& e)
+                {
+                    cerr << "Ошибка: " << e.what() << std::endl;
+                }
+                break;
             }
-            catch (const std::invalid_argument& e)
-            {
-                cerr << "Ошибка: " << e.what() << std::endl;
+            case 2 : {
+                Text.open("D://Message.txt", ios::in);
+                getline(Text, message);
+                Text.close();
+                try
+                {
+                    verify_signature(public_key, message, r, s);
+                }
+                catch (const std::invalid_argument& e)
+                {
+                    cerr << "Ошибка: " << e.what() << std::endl;
+                }
+                break;
             }
+            case 3 : break;
         }
-        else if (opt == 2)
-        {
-            Text.open("D://Message.txt", ios::in);
-            getline(Text, message);
-            Text.close();
-            try
-            {
-                verify_signature(public_key, message, r, s);
-            }
-            catch (const std::invalid_argument& e)
-            {
-                cerr << "Ошибка: " << e.what() << std::endl;
-            }
-        }
-        else if (opt == 3)
-            break;
+        
+
+        
     }
     return 0;
 }

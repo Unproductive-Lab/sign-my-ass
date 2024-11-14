@@ -60,6 +60,9 @@
   "cmake.ignoreCMakeListsMissing": true,
   "git.ignoreLimitWarning": true,
   "files.associations": {
-    "fstream": "cpp"
+    "fstream": "cpp",
+    "*.tcc": "cpp",
+    "string": "cpp",
+    "istream": "cpp"
   }
 }
