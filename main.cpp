@@ -2,106 +2,120 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/integer.hpp>
 #include <boost/random.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <random>
 #include <stdexcept>
 
 using namespace boost::multiprecision;
 using namespace boost::random;
 
-typedef int256_t big_int;
+//typedef int256_t cpp_int;
 
 // Параметры эллиптической кривой P-192
-const big_int p("6277101735386680763835789423207666416102355444459739541047");
-const big_int a("6277101735386680763835789423207666416102355444459739541046");
-const big_int b("2455155546008943817740293915197451784769108058161191238065");
-const big_int Gx("602046282375688656758213480587526111916698976636884684818");
-const big_int Gy("174050332293622031404857552280219410364023488927386650641");
-const big_int n("6277101735386680763835789423176059013767194773182842284081");
+const cpp_int p("6277101735386680763835789423207666416083908700390324961279");
+const cpp_int a("-3");
+const cpp_int b("486662");
+const cpp_int Gx("6020462823637492042502212081282494647802495754375245628291");
+const cpp_int Gy("1741981231981953455700642022569653433483344651014216122020");
+const cpp_int n("6277101735386680763835789423176059013767194773182842284081");
 
-// Функция для вычисления НОД
-big_int gcd(const big_int& a, const big_int& b) {
-    return b == 0 ? a : gcd(b, a % b);
-}
+boost::hash<std::string> string_hash;
 
 // Вычисление обратного элемента по модулю
-big_int mod_inverse(const big_int& k, const big_int& mod) {
-    // Проверка, что mod положительный
-    if (mod <= 0) {
-        throw std::invalid_argument("mod должен быть положительным");
+/*cpp_int mod_inverse(const cpp_int& k, const cpp_int& mod) {
+    if (k < 1 || mod < 2)
+        return -1;
+
+    cpp_int u1 = mod;
+    cpp_int u2 = 0;
+    cpp_int v1 = k;
+    cpp_int v2 = 1;
+
+    while (v1 != 0) {
+        cpp_int q = u1 / v1;
+        cpp_int t1 = u1 - q * v1;
+        cpp_int t2 = u2 - q * v2;
+        u1 = v1;
+        u2 = v2;
+        v1 = t1;
+        v2 = t2;
     }
 
-    // Приводим k к диапазону [0, mod-1]
-    big_int k_mod = k % mod;
-    if (k_mod < 0) {
-        k_mod += mod;
+    return u1 == 1 ? (u2 + mod) % mod : -cpp_int(1);
+}*/
+
+cpp_int gcdExtended(cpp_int a, cpp_int b, cpp_int& x, cpp_int& y) {
+    if (a == 0) {
+        x = 0;
+        y = 1;
+        return b;
     }
 
-    // Проверка на взаимную простоту
-    if (gcd(k_mod, mod) != 1) {
-        throw std::invalid_argument("k и mod не являются взаимно простыми, обратного элемента не существует");
+    cpp_int x1, y1;
+    cpp_int gcd = gcdExtended(b % a, a, x1, y1);
+
+    x = y1 - (b / a) * x1;
+    y = x1;
+
+    return gcd;
+}
+
+// Функция поиска обратного элемента по модулю
+cpp_int mod_inverse(cpp_int a, cpp_int m) {
+    cpp_int x, y;
+    cpp_int g = gcdExtended(a, m, x, y);
+
+    if (g != 1) {
+        return -1;
     }
-
-    // Инициализация переменных для расширенного алгоритма Евклида
-    big_int t = 0, new_t = 1;
-    big_int r = mod, new_r = k_mod;
-
-    // Выполнение расширенного алгоритма Евклида
-    while (new_r != 0) {
-        big_int quotient = r / new_r;
-
-        // Обновление переменных с помощью временных переменных
-        big_int temp_t = t;
-        t = new_t;
-        new_t = temp_t - quotient * new_t;
-
-        big_int temp_r = r;
-        r = new_r;
-        new_r = temp_r - quotient * new_r;
+    else {
+        return x % m;
     }
-
-    // Проверка на случай, если r не равно 1 (не должно происходить после gcd-проверки)
-    if (r > 1) {
-        throw std::invalid_argument("k не имеет обратного по модулю mod");
-    }
-
-    // Если результат отрицательный, приводим его к положительному значению
-    if (t < 0) {
-        t += mod;
-    }
-
-    return t;
 }
 
 struct Point {
-    big_int x;
-    big_int y;
+    cpp_int x;
+    cpp_int y;
     bool is_infinity = false;
 
     Point() : x(0), y(0), is_infinity(true) {}
-    Point(big_int _x, big_int _y) : x(_x), y(_y), is_infinity(false) {}
+    Point(cpp_int _x, cpp_int _y) : x(_x), y(_y), is_infinity(false) {}
 
     Point operator+(const Point& other) const {
         if (is_infinity) return other;
         if (other.is_infinity) return *this;
         if (x == other.x && y != other.y) return Point();
+        //cpp_int inv_k;
 
-        big_int m;
+        cpp_int m;
         if (x == other.x) {
+            /*while (1)
+            {
+                inv_k = mod_inverse(2 * y, p);
+                if (inv_k == -1) continue;
+                else break;
+            }*/
             m = (3 * x * x + a) * mod_inverse(2 * y, p) % p;
         }
         else {
+            /*while (1)
+            {
+                inv_k = mod_inverse(other.x - x, p);
+                if (inv_k == -1) continue;
+                else break;
+            }*/
             m = (other.y - y) * mod_inverse(other.x - x, p) % p;
         }
 
-        big_int x_r = (m * m - x - other.x) % p;
-        big_int y_r = (m * (x - x_r) - y) % p;
+        cpp_int x_r = (m * m - x - other.x) % p;
+        cpp_int y_r = (m * (x - x_r) - y) % p;
         return Point(x_r < 0 ? x_r + p : x_r, y_r < 0 ? y_r + p : y_r);
     }
 
-    Point operator*(const big_int& scalar) const {
+    Point operator*(const cpp_int& scalar) const {
         Point result;
         Point base = *this;
-        big_int k = scalar;
+        cpp_int k = scalar;
 
         while (k != 0) {
             if (k % 2 != 0) {
@@ -116,50 +130,43 @@ struct Point {
 };
 
 // Генерация случайного числа в диапазоне [1, max - 1]
-big_int random_big_int(const big_int& max) {
-    static boost::random::mt19937 gen(static_cast<unsigned int>(std::time(0)));
-    big_int result = 0;
-    big_int base = 1;
-    
+cpp_int random_cpp_int(const cpp_int& max) {
+    std::random_device seed;
+    boost::random::mt19937 gen(seed());
+    boost::random::uniform_int_distribution<cpp_int> dist(1, max - 1);
 
-    while (result < max) {
-        boost::random::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
-        result += base * dist(gen);
-        base <<= 64;
-    }
-
-    return result % max;
-}
-
-// Хеш-функция (простейший пример, использующий только модуль)
-big_int hash_message(const std::string& message) {
-    big_int hash = 0;
-    for (char ch : message) {
-        hash = (hash * 31 + ch) % n;
-    }
-    return hash;
+    return dist(gen);
 }
 
 // Генерация ключей
-void generate_key_pair(big_int& private_key, Point& public_key) {
-    private_key = random_big_int(n);
+void generate_key_pair(cpp_int& private_key, Point& public_key) {
+    private_key = 11;//random_cpp_int(n);
     public_key = Point(Gx, Gy) * private_key;
 }
 
 // Подпись сообщения
-void sign_message(const big_int& private_key, const std::string& message, big_int& r, big_int& s) {
-    big_int z = hash_message(message);
-    big_int k;  // Переместили объявление переменной k вне цикла
+void sign_message(const cpp_int& private_key, const std::string& message, cpp_int& r, cpp_int& s) {
+    cpp_int z = string_hash(message);
+    cpp_int k;  // Переместили объявление переменной k вне цикла
 
     while (true) {
-        k = random_big_int(n);  // Генерируем случайное значение k
+        k = 7;// random_cpp_int(n);  // Генерируем случайное значение k
         Point R = Point(Gx, Gy) * k;
         r = R.x % n;
-
+        //cpp_int inv_k;
         if (r == 0) continue;
 
+        /*while (1)
+         {
+            inv_k = mod_inverse(k, n);
+            if (inv_k == -1) continue;
+            else break;
+        }*/
+        //std::cerr << "1\n";
         s = (mod_inverse(k, n) * (z + r * private_key)) % n;
-        if (s != 0) break;
+        std::cerr << k << "\n" << mod_inverse(k, n) << "\n";
+
+            if (s != 0) break;
     }
 
     // Отладочный вывод
@@ -169,13 +176,20 @@ void sign_message(const big_int& private_key, const std::string& message, big_in
 }
 
 // Проверка подписи
-bool verify_signature(const Point& public_key, const std::string& message, const big_int& r, const big_int& s) {
+bool verify_signature(const Point& public_key, const std::string& message, const cpp_int& r, const cpp_int& s) {
     if (r <= 0 || r >= n || s <= 0 || s >= n) return false;
+    //cpp_int inv_k;
 
-    big_int z = hash_message(message);
-    big_int w = mod_inverse(s, n);
-    big_int u1 = (z * w) % n;
-    big_int u2 = (r * w) % n;
+    cpp_int z = string_hash(message);
+    /*while (1)
+    {
+        inv_k = mod_inverse(s, n);
+        if (inv_k == -1) continue;
+        else break;
+    }*/
+    cpp_int w = mod_inverse(s, n);
+    cpp_int u1 = (z * w) % n;
+    cpp_int u2 = (r * w) % n;
 
     // Отладочный вывод
     std::cout << "Debug Info - Verification Hash: " << z << std::endl;
@@ -192,11 +206,10 @@ bool verify_signature(const Point& public_key, const std::string& message, const
     std::cout << "Debug Info - Provided r: " << r << std::endl;
 
     // Сравнение R.x % n с r и отладка результата
-    big_int R_x_mod_n = R.x % n;
+    cpp_int R_x_mod_n = R.x % n;
     std::cout << "Debug Info - R.x % n: " << R_x_mod_n << std::endl;
 
     bool is_valid = (R_x_mod_n == r);
-
 
     // Дополнительный вывод для конечного результата
     std::cout << "Signature is " << (is_valid ? "valid" : "invalid") << std::endl;
@@ -205,22 +218,28 @@ bool verify_signature(const Point& public_key, const std::string& message, const
 }
 
 int main() {
-    big_int private_key;
+    setlocale(LC_ALL, "Rus");
+    cpp_int private_key;
     Point public_key;
-
+    try {
     // Генерация пары ключей
     generate_key_pair(private_key, public_key);
     std::cout << "Private key: " << private_key << std::endl;
     std::cout << "Public key: (" << public_key.x << ", " << public_key.y << ")" << std::endl;
 
     // Подпись сообщения
-    big_int r, s;
+    std::string message = "Hello, world!";
+    cpp_int r, s;
     sign_message(private_key, message, r, s);
     std::cout << "Signature (r, s): (" << r << ", " << s << ")" << std::endl;
 
     // Проверка подписи
     bool valid = verify_signature(public_key, message, r, s);
     std::cout << "Signature is " << (valid ? "valid" : "invalid") << std::endl;
+    }
+    catch (const std::invalid_argument& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 
     return 0;
 }
