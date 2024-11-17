@@ -20,7 +20,7 @@ Fair warning - в этом проекте представлена кривая 
 
 
 Для получения текста на подпись, программа [читает файл](https://github.com/Unproductive-Lab/sign-my-ass/blob/21c8e324562f7af94d036e2072c441f32cbb3bed/main.cpp#L193) по пути ниже. <br> **Вы можете хотеть поменять это.**
-```cpp
-line 193 Text.open("D://Message.txt", ios::in);
+```
+line 193 : Text.open("D://Message.txt", ios::in);
 ```
 
