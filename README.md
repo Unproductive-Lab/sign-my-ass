@@ -1,5 +1,5 @@
 
-![Static Badge](https://img.shields.io/badge/%D0%A0%D0%B0%D0%B1%D0%BE%D1%82%D0%B0%D0%B5%D1%82%3F-%D0%94%D0%B0!-green) ![Static Badge](https://img.shields.io/badge/%D0%A5%D0%BE%D1%80%D0%BE%D1%88%D0%BE%3F-%D0%9D%D0%B5%D1%8F%D1%81%D0%BD%D0%BE-yellow)
+![Static Badge](https://img.shields.io/badge/%D0%A0%D0%B0%D0%B1%D0%BE%D1%82%D0%B0%D0%B5%D1%82%3F-%D0%94%D0%B0!-green) ![Static Badge](https://img.shields.io/badge/%D0%A5%D0%BE%D1%80%D0%BE%D1%88%D0%BE%3F-%D0%9D%D0%B5%D1%8F%D1%81%D0%BD%D0%BE-yellow) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/9bc5977cad4248d8942488e670813d58)](https://app.codacy.com/gh/Unproductive-Lab/sign-my-ass/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
 
 
