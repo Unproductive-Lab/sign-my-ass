@@ -10,6 +10,7 @@
 
 using namespace boost::multiprecision;
 using namespace boost::random;
+
 using namespace std;
 
 // Параметры эллиптической кривой P-256
@@ -35,6 +36,7 @@ cpp_int mod_inverse(cpp_int a, cpp_int m)
         exp /= 2;
     }
     return result;
+
 }
 
 struct Point 
@@ -44,6 +46,7 @@ struct Point
     bool is_infinity = false;
 
     Point() : x(0), y(0), is_infinity(true) {}
+
     Point(cpp_int _x, cpp_int _y) : x(_x), y(_y), is_infinity(false) {}
 
     Point operator+(const Point& other) const 
@@ -63,6 +66,7 @@ struct Point
             m += p;
         cpp_int x_r = (m * m - x - other.x) % p;
         cpp_int y_r = (m * (x - x_r) - y) % p;
+
         return Point(x_r < 0 ? x_r + p : x_r, y_r < 0 ? y_r + p : y_r);
     }
 
@@ -82,6 +86,7 @@ struct Point
     }
 };
 
+
 cpp_int random_cpp_int(const cpp_int& max) 
 {
     random_device seed;
@@ -93,10 +98,12 @@ cpp_int random_cpp_int(const cpp_int& max)
 void generate_key_pair(cpp_int& private_key, Point& public_key) 
 {
     private_key = random_cpp_int(n);
+
     public_key = Point(Gx, Gy) * private_key;
     //cout << "Секретный ключ: " << private_key << "\n";
     cout << "Публичный ключ: (" << public_key.x << ", " << public_key.y << ")\n";
 }
+
 
 void sign_message(const cpp_int& private_key, const std::string& message, cpp_int& r, cpp_int& s) 
 {
@@ -112,6 +119,7 @@ void sign_message(const cpp_int& private_key, const std::string& message, cpp_in
         s = (mod_inverse(k, n) * (h + r * private_key)) % n;
         if (s != 0) 
             break;
+
     }
     if (r < 0)
         r += n;
@@ -122,6 +130,7 @@ void sign_message(const cpp_int& private_key, const std::string& message, cpp_in
     cout << "Подпись (r, s): (" << r << ", " << s << ")\n";
     system("pause");
 }
+
 
 void verify_signature(const Point& public_key, const std::string& message, const cpp_int& r, const cpp_int& s) 
 {
@@ -157,6 +166,7 @@ void verify_signature(const Point& public_key, const std::string& message, const
     bool is_valid = (X_x_mod_n == r);
     cout << "Подпись " << (is_valid ? "действительна" : "недействительна") << "\n";
     system("pause");
+
 }
 
 int main() 
@@ -164,6 +174,7 @@ int main()
     setlocale(LC_ALL, "Rus");
     cpp_int private_key;
     Point public_key;
+
     ifstream Text;
     string message;
     int opt;
@@ -205,5 +216,6 @@ int main()
         else if (opt == 3)
             break;
     }
+
     return 0;
 }
